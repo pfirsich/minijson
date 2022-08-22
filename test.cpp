@@ -8,8 +8,7 @@ void printValue(const minijson::JsonValue& value, size_t indent = 0)
     std::cout << std::string(4 * indent, ' ');
     switch (value.type()) {
     case minijson::JsonValue::Type::Null:
-        std::cout << "null"
-                  << "\n";
+        std::cout << "null\n";
         break;
     case minijson::JsonValue::Type::Bool:
         std::cout << "bool: " << value.asBool() << "\n";
@@ -74,8 +73,8 @@ int main()
         std::cout << minijson::getContext(src, err.cursor) << std::endl;
         return 1;
     }
-    const auto& doc = *res;
 
+    const auto& doc = *res;
     printValue(doc);
 
     std::cout << doc.dump("  ") << std::endl;
