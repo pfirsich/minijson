@@ -234,7 +234,7 @@ Result<JsonValue> parseValue(std::string_view source, size_t& cursor)
 
         auto number = parseNumber(value);
         if (!number) {
-            return Error { cursor, "Invalid numbera" };
+            return Error { cursor, "Invalid number" };
         }
         cursor += value.size();
         return JsonValue(*number);
