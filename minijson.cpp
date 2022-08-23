@@ -21,7 +21,7 @@ Result<std::string> parseString(std::string_view source, size_t& cursor)
             if (cursor >= source.size()) {
                 return Error { cursor, "Incomplete character escape" };
             }
-            const auto c = str[cursor];
+            const auto c = source[cursor];
 
             if (c == 'u') {
                 return Error { cursor, "Unicode escapes are not implemented yet" };
@@ -39,7 +39,9 @@ Result<std::string> parseString(std::string_view source, size_t& cursor)
             };
             const auto it = escapes.find(c);
             if (it == escapes.end()) {
-                return Error { cursor, "Invalid character escape" };
+                return Error { cursor,
+                    std::string("Invalid character escape '") + c + "' (" + std::to_string(c)
+                        + ")" };
             }
 
             str.append(it->second);
