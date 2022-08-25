@@ -110,11 +110,11 @@ template <typename T>
 class Result {
 public:
     Result(T&& t) : value(std::move(t)) { }
-
     Result(Error e) : value(std::move(e)) { }
 
     operator bool() const { return value.index() == 0; }
     const T& operator*() const { return std::get<T>(value); }
+    T& operator*() { return std::get<T>(value); }
     const T* operator->() const { return &std::get<T>(value); }
     const Error& error() const { return std::get<Error>(value); }
 
