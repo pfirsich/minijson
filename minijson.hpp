@@ -1,6 +1,7 @@
 #pragma once
 
 #include <map>
+#include <memory_resource>
 #include <string>
 #include <string_view>
 #include <variant>
@@ -13,11 +14,11 @@ public:
     struct Null { };
     using Bool = bool;
     using Number = double;
-    using String = std::string;
-    using Array = std::vector<JsonValue>;
+    using String = std::pmr::string;
+    using Array = std::pmr::vector<JsonValue>;
     // map instead of unordered_map, because it supports incomplete value types
     // We need a transparent comparator to enable .find with std::string_view
-    using Object = std::map<std::string, JsonValue, std::less<>>;
+    using Object = std::pmr::map<std::pmr::string, JsonValue, std::less<>>;
 
     enum class Type {
         Invalid = 0,
@@ -124,5 +125,6 @@ private:
 
 std::string getContext(std::string_view str, size_t cursor);
 
-Result<JsonValue> parse(std::string_view source);
+Result<JsonValue> parse(
+    std::string_view source, std::pmr::memory_resource* memRes = std::pmr::get_default_resource());
 }

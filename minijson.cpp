@@ -8,12 +8,13 @@
 using namespace minijson;
 
 namespace {
-Result<std::string> parseString(std::string_view source, size_t& cursor)
+Result<JsonValue::String> parseString(
+    std::string_view source, size_t& cursor, std::pmr::memory_resource* memRes)
 {
     assert(cursor < source.size());
     assert(source[cursor] == '"');
     cursor++;
-    std::string str;
+    JsonValue::String str(memRes);
     str.reserve(32);
     while (cursor < source.size()) {
         if (source[cursor] == '\\') {
@@ -27,7 +28,7 @@ Result<std::string> parseString(std::string_view source, size_t& cursor)
                 return Error { cursor, "Unicode escapes are not implemented yet" };
             }
 
-            static const std::unordered_map<char, std::string> escapes {
+            static const std::unordered_map<char, std::string_view> escapes {
                 { '"', "\"" },
                 { '\\', "\\" },
                 { '/', "/" },
@@ -90,11 +91,13 @@ bool skipSeparator(std::string_view source, size_t& cursor)
     return false;
 }
 
-Result<JsonValue> parseValue(std::string_view source, size_t& cursor);
+Result<JsonValue> parseValue(
+    std::string_view source, size_t& cursor, std::pmr::memory_resource* memRes);
 
-Result<JsonValue> parseArray(std::string_view source, size_t& cursor)
+Result<JsonValue> parseArray(
+    std::string_view source, size_t& cursor, std::pmr::memory_resource* memRes)
 {
-    JsonValue::Array values;
+    JsonValue::Array values(memRes);
     while (cursor < source.size()) {
         skipWhitespace(source, cursor);
 
@@ -107,7 +110,7 @@ Result<JsonValue> parseArray(std::string_view source, size_t& cursor)
             break;
         }
 
-        auto value = parseValue(source, cursor);
+        auto value = parseValue(source, cursor, memRes);
         if (!value) {
             return value.error();
         }
@@ -126,9 +129,10 @@ Result<JsonValue> parseArray(std::string_view source, size_t& cursor)
     return JsonValue(values);
 }
 
-Result<JsonValue> parseObject(std::string_view source, size_t& cursor)
+Result<JsonValue> parseObject(
+    std::string_view source, size_t& cursor, std::pmr::memory_resource* memRes)
 {
-    JsonValue::Object obj;
+    JsonValue::Object obj(memRes);
     while (cursor < source.size()) {
         skipWhitespace(source, cursor);
 
@@ -145,7 +149,7 @@ Result<JsonValue> parseObject(std::string_view source, size_t& cursor)
             return Error { cursor, "Expected key" };
         }
 
-        const auto key = parseString(source, cursor);
+        const auto key = parseString(source, cursor, memRes);
         if (!key) {
             return key.error();
         }
@@ -163,7 +167,7 @@ Result<JsonValue> parseObject(std::string_view source, size_t& cursor)
             return Error { cursor, "Expected value" };
         }
 
-        auto value = parseValue(source, cursor);
+        auto value = parseValue(source, cursor, memRes);
         if (!value) {
             return value.error();
         }
@@ -182,7 +186,8 @@ Result<JsonValue> parseObject(std::string_view source, size_t& cursor)
     return JsonValue(obj);
 }
 
-Result<JsonValue> parseValue(std::string_view source, size_t& cursor)
+Result<JsonValue> parseValue(
+    std::string_view source, size_t& cursor, std::pmr::memory_resource* memRes)
 {
     skipWhitespace(source, cursor);
     if (cursor >= source.size()) {
@@ -192,20 +197,20 @@ Result<JsonValue> parseValue(std::string_view source, size_t& cursor)
 
     if (source[cursor] == '{') {
         cursor++;
-        auto res = parseObject(source, cursor);
+        auto res = parseObject(source, cursor, memRes);
         if (!res) {
             return res.error();
         }
         return res;
     } else if (source[cursor] == '[') {
         cursor++;
-        auto res = parseArray(source, cursor);
+        auto res = parseArray(source, cursor, memRes);
         if (!res) {
             return res.error();
         }
         return res;
     } else if (source[cursor] == '"') {
-        auto res = parseString(source, cursor);
+        auto res = parseString(source, cursor, memRes);
         if (!res) {
             return res.error();
         }
@@ -299,7 +304,7 @@ std::string JsonValue::dump(std::string_view indent, size_t indentLevel) const
         return std::to_string(asNumber());
     case Type::String:
         // TODO: Escape characters
-        return "\"" + asString() + "\"";
+        return std::string("\"" + asString() + "\"");
     case Type::Array: {
         std::string ret = "[\n";
         const auto& arr = asArray();
@@ -339,6 +344,7 @@ std::string JsonValue::dump(std::string_view indent, size_t indentLevel) const
     }
     default:
         assert(false && "Invalid JsonValue type");
+        return "";
     }
 }
 
@@ -364,9 +370,9 @@ std::string getContext(std::string_view str, size_t cursor)
         + std::string(cursor - lineStart, ' ') + "^";
 }
 
-Result<JsonValue> parse(std::string_view source)
+Result<JsonValue> parse(std::string_view source, std::pmr::memory_resource* memRes)
 {
     size_t cursor = 0;
-    return parseValue(source, cursor);
+    return parseValue(source, cursor, memRes);
 }
 }
