@@ -45,7 +45,7 @@ int main(int argc, char** argv)
 {
     const std::vector<std::string> args(argv + 1, argv + argc);
     if (args.size() < 1) {
-        std::cerr << "Usage: load-file <file>" << std::endl;
+        std::cerr << "Usage: load-file <file> [<num-its>]" << std::endl;
         return 1;
     }
 
@@ -79,12 +79,20 @@ int main(int argc, char** argv)
 
     const auto parseStart = std::chrono::high_resolution_clock::now();
 
-    const auto res = minijson::parse(json);
-    if (!res) {
-        const auto& err = res.error();
-        std::cerr << "Could not parse json: " << err.message << " at " << err.cursor << std::endl;
-        std::cout << minijson::getContext(json, err.cursor) << std::endl;
-        return 1;
+    std::pmr::monotonic_buffer_resource pool(2048);
+
+    const auto num_it = argc > 1 ? std::stoi(args[1]) : 1;
+    minijson::Result<minijson::JsonValue> res(minijson::Error {});
+    for (int i = 0; i < num_it; ++i) {
+        res = minijson::parse(json, &pool);
+        if (!res) {
+            const auto& err = res.error();
+            std::cerr << "Could not parse json: " << err.message << " at " << err.cursor
+                      << std::endl;
+            std::cout << minijson::getContext(json, err.cursor) << std::endl;
+            return 1;
+        }
+        pool.release();
     }
 
     std::cerr << "Parse: "
